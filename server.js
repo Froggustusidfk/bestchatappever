@@ -9,42 +9,57 @@ const io = socketIo(server, {
     maxHttpBufferSize: 1e8 // 100 MB
 });
 
-// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Store connected users
-const users = new Set();
+const users = new Map();
 
 io.on('connection', (socket) => {
     console.log('New user connected');
 
-    socket.on('join', (username) => {
-        users.add(username);
-        socket.username = username;
-        io.emit('userJoined', username);
-        io.emit('userList', Array.from(users));
+    socket.on('join', (data) => {
+        users.set(socket.id, { username: data.username, profilePicture: data.profilePicture });
+        socket.username = data.username;
+        socket.profilePicture = data.profilePicture;
+        io.emit('userJoined', data.username);
+        io.emit('userList', Array.from(users.values()));
     });
 
     socket.on('chatMessage', (message) => {
         io.emit('chatMessage', {
             username: socket.username,
-            message: message
+            message: message,
+            profilePicture: socket.profilePicture
         });
     });
 
     socket.on('chatImage', (imageData) => {
         io.emit('chatImage', {
             username: socket.username,
-            image: imageData
+            image: imageData,
+            profilePicture: socket.profilePicture
         });
     });
 
     socket.on('disconnect', () => {
         if (socket.username) {
-            users.delete(socket.username);
+            users.delete(socket.id);
             io.emit('userLeft', socket.username);
-            io.emit('userList', Array.from(users));
+            io.emit('userList', Array.from(users.values()));
         }
+    });
+
+    socket.on('updateUsername', (newUsername) => {
+        const oldUsername = socket.username;
+        socket.username = newUsername;
+        users.get(socket.id).username = newUsername;
+        io.emit('userUpdated', { oldUsername, newUsername });
+        io.emit('userList', Array.from(users.values()));
+    });
+    
+    socket.on('updateProfilePicture', (newProfilePicture) => {
+        socket.profilePicture = newProfilePicture;
+        users.get(socket.id).profilePicture = newProfilePicture;
+        io.emit('userList', Array.from(users.values()));
     });
 });
 

@@ -4,15 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Chat App</title>
-    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="username-container">
+        <div id="profile-picture-container">
+            <img id="profile-picture-preview" src="default-avatar.png" alt="Profile Picture">
+            <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
+            <button id="profile-picture-button"><i class="fas fa-camera"></i></button>
+        </div>
         <input type="text" id="username-input" placeholder="Enter your username">
         <button id="username-submit">Join Chat</button>
     </div>
     <div id="chat-container" style="display: none;">
+        <div id="chat-header">
+            <h2>Freak chat</h2>
+            <button id="settings-button"><i class="fas fa-cog"></i></button>
+        </div>
         <div id="chat-messages"></div>
         <div id="chat-input-container">
             <form id="chat-form">
@@ -21,6 +30,19 @@
                 <button type="button" id="image-upload-button"><i class="fas fa-upload"></i></button>
                 <button type="submit">Send</button>
             </form>
+        </div>
+    </div>
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div id="settings-profile-picture-container">
+                <img id="settings-profile-picture-preview" src="default-avatar.png" alt="Profile Picture">
+                <input type="file" id="settings-profile-picture-input" accept="image/*" style="display: none;">
+                <button id="settings-profile-picture-button"><i class="fas fa-camera"></i></button>
+            </div>
+            <input type="text" id="settings-username-input" placeholder="New username">
+            <button id="settings-save">Save Changes</button>
+            <button id="settings-close">Close</button>
         </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
