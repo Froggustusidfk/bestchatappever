@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const chatMessages = document.getElementById('chat-messages');
+    const imageUpload = document.getElementById('image-upload');
+    const imageUploadButton = document.getElementById('image-upload-button');
 
     let username = localStorage.getItem('chatUsername');
 
@@ -39,8 +41,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    imageUploadButton.addEventListener('click', () => {
+        imageUpload.click();
+    });
+
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = e.target.result;
+                socket.emit('chatImage', img);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
     socket.on('chatMessage', (data) => {
         addMessage(data.username, data.message);
+    });
+
+    socket.on('chatImage', (data) => {
+        addImage(data.username, data.image);
     });
 
     socket.on('userJoined', (username) => {
@@ -61,6 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const color = getColorForUsername(sender);
             messageElement.innerHTML = `<strong style="color: ${color}">${sender}:</strong> ${text}`;
         }
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addImage(sender, imageData) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message');
+        const color = getColorForUsername(sender);
+        messageElement.innerHTML = `
+            <strong style="color: ${color}">${sender}:</strong><br>
+            <img src="${imageData}" alt="Uploaded image" style="max-width: 100%; max-height: 300px;">
+        `;
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }

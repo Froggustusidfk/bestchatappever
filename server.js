@@ -5,7 +5,9 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    maxHttpBufferSize: 1e8 // 100 MB
+});
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -27,6 +29,13 @@ io.on('connection', (socket) => {
         io.emit('chatMessage', {
             username: socket.username,
             message: message
+        });
+    });
+
+    socket.on('chatImage', (imageData) => {
+        io.emit('chatImage', {
+            username: socket.username,
+            image: imageData
         });
     });
 
