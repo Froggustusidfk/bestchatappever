@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (username) {
         joinChat(username);
     } else {
-        usernameContainer.style.display = 'block';
+        usernameContainer.style.display = 'flex';
     }
 
     usernameSubmit.addEventListener('click', () => {
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function joinChat(username) {
         usernameContainer.style.display = 'none';
-        chatContainer.style.display = 'block';
+        chatContainer.style.display = 'flex';
         socket.emit('join', username);
     }
 
@@ -53,8 +53,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addMessage(sender, text) {
         const messageElement = document.createElement('div');
-        messageElement.innerHTML = `<strong>${sender}:</strong> ${text}`;
+        messageElement.classList.add('message');
+        if (sender === 'System') {
+            messageElement.classList.add('system');
+            messageElement.innerHTML = `<em>${text}</em>`;
+        } else {
+            const color = getColorForUsername(sender);
+            messageElement.innerHTML = `<strong style="color: ${color}">${sender}:</strong> ${text}`;
+        }
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function getColorForUsername(username) {
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+            hash = username.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = hash % 360;
+        return `hsl(${hue}, 70%, 40%)`;
     }
 });
