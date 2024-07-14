@@ -29,11 +29,20 @@ io.on('connection', (socket) => {
         users.set(socket.id, { username: data.username, profilePicture: data.profilePicture });
         socket.username = data.username;
         socket.profilePicture = data.profilePicture;
-        io.emit('userJoined', data.username);
-        io.emit('userList', Array.from(users.values()));
         
         // Send chat history to the new user
         socket.emit('chatHistory', chatHistory);
+        
+        // Add join message to history and broadcast it
+        const joinMessage = {
+            type: 'system',
+            message: `${data.username} has joined the chat`,
+            timestamp: new Date().toISOString()
+        };
+        addToHistory(joinMessage);
+        io.emit('chatMessage', joinMessage);
+        
+        io.emit('userList', Array.from(users.values()));
     });
 
     socket.on('chatMessage', (message) => {
@@ -63,7 +72,13 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         if (socket.username) {
             users.delete(socket.id);
-            io.emit('userLeft', socket.username);
+            const leaveMessage = {
+                type: 'system',
+                message: `${socket.username} has left the chat`,
+                timestamp: new Date().toISOString()
+            };
+            addToHistory(leaveMessage);
+            io.emit('chatMessage', leaveMessage);
             io.emit('userList', Array.from(users.values()));
         }
     });
@@ -72,7 +87,13 @@ io.on('connection', (socket) => {
         const oldUsername = socket.username;
         socket.username = newUsername;
         users.get(socket.id).username = newUsername;
-        io.emit('userUpdated', { oldUsername, newUsername });
+        const updateMessage = {
+            type: 'system',
+            message: `${oldUsername} has changed their name to ${newUsername}`,
+            timestamp: new Date().toISOString()
+        };
+        addToHistory(updateMessage);
+        io.emit('chatMessage', updateMessage);
         io.emit('userList', Array.from(users.values()));
     });
     

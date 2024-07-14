@@ -126,19 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('chatMessage', (data) => {
-        addMessage(data.username, data.message, data.profilePicture, data.timestamp);
+        if (data.type === 'system') {
+            addSystemMessage(data.message, data.timestamp);
+        } else {
+            addMessage(data.username, data.message, data.profilePicture, data.timestamp);
+        }
     });
 
     socket.on('chatImage', (data) => {
         addImage(data.username, data.image, data.profilePicture, data.timestamp);
-    });
-
-    socket.on('userJoined', (username) => {
-        addMessage('System', `${username} has joined the chat`);
-    });
-
-    socket.on('userLeft', (username) => {
-        addMessage('System', `${username} has left the chat`);
     });
 
     socket.on('chatHistory', (history) => {
@@ -148,28 +144,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 addMessage(item.username, item.message, item.profilePicture, item.timestamp);
             } else if (item.type === 'image') {
                 addImage(item.username, item.image, item.profilePicture, item.timestamp);
+            } else if (item.type === 'system') {
+                addSystemMessage(item.message, item.timestamp);
             }
         });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     });
+
+    function addSystemMessage(text, timestamp) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', 'system');
+        messageElement.innerHTML = `
+            <em>${text}</em>
+            <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
+        `;
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
     function addMessage(sender, text, senderProfilePicture, timestamp) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
-        if (sender === 'System') {
-            messageElement.classList.add('system');
-            messageElement.innerHTML = `<em>${text}</em>`;
-        } else {
-            const color = getColorForUsername(sender);
-            messageElement.innerHTML = `
-                <div class="message-avatar-container" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
-                    <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
-                </div>
-                <div>
-                    <strong style="color: ${color}">${sender}:</strong> ${text}
-                    <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
-                </div>
-            `;
-        }
+        const color = getColorForUsername(sender);
+        messageElement.innerHTML = `
+            <div class="message-avatar-container" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
+                <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
+            </div>
+            <div>
+                <strong style="color: ${color}">${sender}:</strong> ${text}
+                <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
+            </div>
+        `;
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
