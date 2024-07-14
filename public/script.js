@@ -126,43 +126,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('chatMessage', (data) => {
-        if (data.type === 'system') {
-            addSystemMessage(data.message, data.timestamp);
-        } else {
-            addMessage(data.username, data.message, data.profilePicture, data.timestamp);
-        }
+        addMessage(data.username, data.message, data.profilePicture);
     });
 
     socket.on('chatImage', (data) => {
-        addImage(data.username, data.image, data.profilePicture, data.timestamp);
+        addImage(data.username, data.image, data.profilePicture);
     });
 
     socket.on('chatHistory', (history) => {
         chatMessages.innerHTML = '';
         history.forEach(item => {
             if (item.type === 'message') {
-                addMessage(item.username, item.message, item.profilePicture, item.timestamp);
+                addMessage(item.username, item.message, item.profilePicture);
             } else if (item.type === 'image') {
-                addImage(item.username, item.image, item.profilePicture, item.timestamp);
-            } else if (item.type === 'system') {
-                addSystemMessage(item.message, item.timestamp);
+                addImage(item.username, item.image, item.profilePicture);
             }
         });
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
-    function addSystemMessage(text, timestamp) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message', 'system');
-        messageElement.innerHTML = `
-            <em>${text}</em>
-            <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
-        `;
-        chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function addMessage(sender, text, senderProfilePicture, timestamp) {
+    function addMessage(sender, text, senderProfilePicture) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         const color = getColorForUsername(sender);
@@ -171,15 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
             </div>
             <div>
-                <strong style="color: ${color}">${sender}:</strong> ${text}
-                <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
+                <strong style="color: ${color}">${sender}:</strong> ${formatMessageWithLinks(text)}
             </div>
         `;
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function addImage(sender, imageData, senderProfilePicture, timestamp) {
+    function addImage(sender, imageData, senderProfilePicture) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         const color = getColorForUsername(sender);
@@ -190,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <div>
                 <strong style="color: ${color}">${sender}:</strong><br>
                 <img src="${imageData}" alt="Uploaded image" style="max-width: 100%; max-height: 300px;">
-                <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
             </div>
         `;
         chatMessages.appendChild(messageElement);
@@ -204,5 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const hue = hash % 360;
         return `hsl(${hue}, 70%, 40%)`;
+    }
+
+    function formatMessageWithLinks(text) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, function(url) {
+            return `<a href="${url}" target="_blank">${url}</a>`;
+        });
     }
 });

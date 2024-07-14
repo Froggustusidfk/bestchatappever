@@ -33,15 +33,6 @@ io.on('connection', (socket) => {
         // Send chat history to the new user
         socket.emit('chatHistory', chatHistory);
         
-        // Add join message to history and broadcast it
-        const joinMessage = {
-            type: 'system',
-            message: `${data.username} has joined the chat`,
-            timestamp: new Date().toISOString()
-        };
-        addToHistory(joinMessage);
-        io.emit('chatMessage', joinMessage);
-        
         io.emit('userList', Array.from(users.values()));
     });
 
@@ -50,8 +41,7 @@ io.on('connection', (socket) => {
             type: 'message',
             username: socket.username,
             message: message,
-            profilePicture: socket.profilePicture,
-            timestamp: new Date().toISOString()
+            profilePicture: socket.profilePicture
         };
         addToHistory(messageData);
         io.emit('chatMessage', messageData);
@@ -62,8 +52,7 @@ io.on('connection', (socket) => {
             type: 'image',
             username: socket.username,
             image: imageData,
-            profilePicture: socket.profilePicture,
-            timestamp: new Date().toISOString()
+            profilePicture: socket.profilePicture
         };
         addToHistory(imageMessage);
         io.emit('chatImage', imageMessage);
@@ -72,28 +61,13 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         if (socket.username) {
             users.delete(socket.id);
-            const leaveMessage = {
-                type: 'system',
-                message: `${socket.username} has left the chat`,
-                timestamp: new Date().toISOString()
-            };
-            addToHistory(leaveMessage);
-            io.emit('chatMessage', leaveMessage);
             io.emit('userList', Array.from(users.values()));
         }
     });
 
     socket.on('updateUsername', (newUsername) => {
-        const oldUsername = socket.username;
         socket.username = newUsername;
         users.get(socket.id).username = newUsername;
-        const updateMessage = {
-            type: 'system',
-            message: `${oldUsername} has changed their name to ${newUsername}`,
-            timestamp: new Date().toISOString()
-        };
-        addToHistory(updateMessage);
-        io.emit('chatMessage', updateMessage);
         io.emit('userList', Array.from(users.values()));
     });
     
