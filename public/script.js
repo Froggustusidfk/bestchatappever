@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const profilePictureButton = document.getElementById('profile-picture-button');
     const profilePicturePreview = document.getElementById('profile-picture-preview');
 
-    // New elements for settings
     const settingsButton = document.getElementById('settings-button');
     const settingsModal = document.getElementById('settings-modal');
     const settingsProfilePictureInput = document.getElementById('settings-profile-picture-input');
@@ -77,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Settings functionality
     settingsButton.addEventListener('click', () => {
         settingsModal.style.display = 'block';
         settingsUsernameInput.value = username;
@@ -115,13 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('chatProfilePicture', profilePicture);
                 socket.emit('updateProfilePicture', profilePicture);
 
-                // Force a redraw of the image
                 profilePicturePreview.style.display = 'none';
-                profilePicturePreview.offsetHeight; // Trigger a reflow
+                profilePicturePreview.offsetHeight;
                 profilePicturePreview.style.display = 'block';
 
                 settingsProfilePicturePreview.style.display = 'none';
-                settingsProfilePicturePreview.offsetHeight; // Trigger a reflow
+                settingsProfilePicturePreview.offsetHeight;
                 settingsProfilePicturePreview.style.display = 'block';
             };
             reader.readAsDataURL(file);
@@ -129,11 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('chatMessage', (data) => {
-        addMessage(data.username, data.message, data.profilePicture);
+        addMessage(data.username, data.message, data.profilePicture, data.timestamp);
     });
 
     socket.on('chatImage', (data) => {
-        addImage(data.username, data.image, data.profilePicture);
+        addImage(data.username, data.image, data.profilePicture, data.timestamp);
     });
 
     socket.on('userJoined', (username) => {
@@ -144,7 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage('System', `${username} has left the chat`);
     });
 
-    function addMessage(sender, text, senderProfilePicture) {
+    socket.on('chatHistory', (history) => {
+        chatMessages.innerHTML = '';
+        history.forEach(item => {
+            if (item.type === 'message') {
+                addMessage(item.username, item.message, item.profilePicture, item.timestamp);
+            } else if (item.type === 'image') {
+                addImage(item.username, item.image, item.profilePicture, item.timestamp);
+            }
+        });
+    });
+
+    function addMessage(sender, text, senderProfilePicture, timestamp) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         if (sender === 'System') {
@@ -158,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div>
                     <strong style="color: ${color}">${sender}:</strong> ${text}
+                    <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
                 </div>
             `;
         }
@@ -165,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function addImage(sender, imageData, senderProfilePicture) {
+    function addImage(sender, imageData, senderProfilePicture, timestamp) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         const color = getColorForUsername(sender);
@@ -176,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div>
                 <strong style="color: ${color}">${sender}:</strong><br>
                 <img src="${imageData}" alt="Uploaded image" style="max-width: 100%; max-height: 300px;">
+                <small class="timestamp">${new Date(timestamp).toLocaleString()}</small>
             </div>
         `;
         chatMessages.appendChild(messageElement);

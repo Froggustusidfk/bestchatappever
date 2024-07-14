@@ -12,6 +12,15 @@ const io = socketIo(server, {
 app.use(express.static(path.join(__dirname, 'public')));
 
 const users = new Map();
+const chatHistory = [];
+const MAX_HISTORY = 200;
+
+function addToHistory(message) {
+    chatHistory.push(message);
+    if (chatHistory.length > MAX_HISTORY) {
+        chatHistory.shift();
+    }
+}
 
 io.on('connection', (socket) => {
     console.log('New user connected');
@@ -22,22 +31,33 @@ io.on('connection', (socket) => {
         socket.profilePicture = data.profilePicture;
         io.emit('userJoined', data.username);
         io.emit('userList', Array.from(users.values()));
+        
+        // Send chat history to the new user
+        socket.emit('chatHistory', chatHistory);
     });
 
     socket.on('chatMessage', (message) => {
-        io.emit('chatMessage', {
+        const messageData = {
+            type: 'message',
             username: socket.username,
             message: message,
-            profilePicture: socket.profilePicture
-        });
+            profilePicture: socket.profilePicture,
+            timestamp: new Date().toISOString()
+        };
+        addToHistory(messageData);
+        io.emit('chatMessage', messageData);
     });
 
     socket.on('chatImage', (imageData) => {
-        io.emit('chatImage', {
+        const imageMessage = {
+            type: 'image',
             username: socket.username,
             image: imageData,
-            profilePicture: socket.profilePicture
-        });
+            profilePicture: socket.profilePicture,
+            timestamp: new Date().toISOString()
+        };
+        addToHistory(imageMessage);
+        io.emit('chatImage', imageMessage);
     });
 
     socket.on('disconnect', () => {
