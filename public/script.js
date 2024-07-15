@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let username = localStorage.getItem('chatUsername');
     let profilePicture = localStorage.getItem('chatProfilePicture') || 'default-avatar.png';
+    let isLoadingHistory = false;
 
     if (username) {
         joinChat(username);
@@ -135,16 +136,29 @@ document.addEventListener('DOMContentLoaded', () => {
         addImage(data.username, data.image, data.profilePicture);
     });
 
-    socket.on('chatHistory', (history) => {
+    socket.on('initialChatHistory', (history) => {
         chatMessages.innerHTML = '';
-        history.forEach(item => {
-            if (item.type === 'message') {
-                addMessage(item.username, item.message, item.profilePicture);
-            } else if (item.type === 'image') {
-                addImage(item.username, item.image, item.profilePicture);
-            }
-        });
+        appendMessages(history);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        if (history.length === 20) {
+            addLoadMoreButton();
+        }
+    });
+
+    socket.on('additionalChatHistory', (messages) => {
+        isLoadingHistory = false;
+        if (messages.length > 0) {
+            const oldScrollHeight = chatMessages.scrollHeight;
+            appendMessages(messages.reverse());
+            chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
+            
+            if (messages.length < 20) {
+                removeLoadMoreButton();
+            }
+        } else {
+            removeLoadMoreButton();
+        }
     });
 
     socket.on('usernameUpdated', (newUsername) => {
@@ -152,7 +166,31 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('chatUsername', username);
     });
 
+    function appendMessages(messages) {
+        const fragment = document.createDocumentFragment();
+        messages.forEach(item => {
+            if (item.type === 'message') {
+                fragment.appendChild(createMessageElement(item.username, item.message, item.profilePicture));
+            } else if (item.type === 'image') {
+                fragment.appendChild(createImageElement(item.username, item.image, item.profilePicture));
+            }
+        });
+        chatMessages.insertBefore(fragment, chatMessages.firstChild);
+    }
+
     function addMessage(sender, text, senderProfilePicture) {
+        const messageElement = createMessageElement(sender, text, senderProfilePicture);
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addImage(sender, imageData, senderProfilePicture) {
+        const imageElement = createImageElement(sender, imageData, senderProfilePicture);
+        chatMessages.appendChild(imageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function createMessageElement(sender, text, senderProfilePicture) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         const color = getColorForUsername(sender);
@@ -164,15 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <strong style="color: ${color}">${sender}:</strong> ${formatMessageWithLinks(text)}
             </div>
         `;
-        chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return messageElement;
     }
 
-    function addImage(sender, imageData, senderProfilePicture) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message');
+    function createImageElement(sender, imageData, senderProfilePicture) {
+        const imageElement = document.createElement('div');
+        imageElement.classList.add('message');
         const color = getColorForUsername(sender);
-        messageElement.innerHTML = `
+        imageElement.innerHTML = `
             <div class="message-avatar-container" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
                 <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
             </div>
@@ -181,8 +218,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${imageData}" alt="Uploaded image" style="max-width: 100%; max-height: 300px;">
             </div>
         `;
-        chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return imageElement;
+    }
+
+    function addLoadMoreButton() {
+        if (!document.getElementById('load-more-button')) {
+            const loadMoreButton = document.createElement('button');
+            loadMoreButton.id = 'load-more-button';
+            loadMoreButton.textContent = 'Load More';
+            loadMoreButton.addEventListener('click', loadMoreMessages);
+            chatMessages.insertBefore(loadMoreButton, chatMessages.firstChild);
+        }
+    }
+
+    function removeLoadMoreButton() {
+        const loadMoreButton = document.getElementById('load-more-button');
+        if (loadMoreButton) {
+            loadMoreButton.remove();
+        }
+    }
+
+    function loadMoreMessages() {
+        if (!isLoadingHistory) {
+            isLoadingHistory = true;
+            const lastMessageIndex = chatMessages.children.length - 1; // Subtract 1 to account for the "Load More" button
+            socket.emit('requestMoreHistory', lastMessageIndex);
+        }
     }
 
     function getColorForUsername(username) {

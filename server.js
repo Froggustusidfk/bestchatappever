@@ -14,6 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const users = new Map();
 const chatHistory = [];
 const MAX_HISTORY = 200;
+const INITIAL_LOAD = 20;
 const MAX_USERNAME_LENGTH = 30;
 
 function addToHistory(message) {
@@ -32,10 +33,19 @@ io.on('connection', (socket) => {
         socket.username = username;
         socket.profilePicture = data.profilePicture;
         
-        // Send chat history to the new user
-        socket.emit('chatHistory', chatHistory);
+        // Send the most recent messages to the new user
+        const recentMessages = chatHistory.slice(-INITIAL_LOAD);
+        socket.emit('initialChatHistory', recentMessages);
         
         io.emit('userList', Array.from(users.values()));
+    });
+
+    socket.on('requestMoreHistory', (lastMessageIndex) => {
+        const moreMessages = chatHistory.slice(
+            Math.max(0, lastMessageIndex - INITIAL_LOAD),
+            lastMessageIndex
+        );
+        socket.emit('additionalChatHistory', moreMessages);
     });
 
     socket.on('chatMessage', (message) => {
