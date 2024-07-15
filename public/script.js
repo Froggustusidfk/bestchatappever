@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsSaveButton = document.getElementById('settings-save');
     const settingsCloseButton = document.getElementById('settings-close');
 
+    const MAX_USERNAME_LENGTH = 30;
+
     let username = localStorage.getItem('chatUsername');
     let profilePicture = localStorage.getItem('chatProfilePicture') || 'default-avatar.png';
 
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     profilePictureInput.addEventListener('change', handleProfilePictureChange);
 
     usernameSubmit.addEventListener('click', () => {
-        username = usernameInput.value.trim();
+        username = usernameInput.value.trim().slice(0, MAX_USERNAME_LENGTH);
         if (username) {
             localStorage.setItem('chatUsername', username);
             joinChat(username);
@@ -93,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsProfilePictureInput.addEventListener('change', handleProfilePictureChange);
 
     settingsSaveButton.addEventListener('click', () => {
-        const newUsername = settingsUsernameInput.value.trim();
+        const newUsername = settingsUsernameInput.value.trim().slice(0, MAX_USERNAME_LENGTH);
         if (newUsername && newUsername !== username) {
             username = newUsername;
             localStorage.setItem('chatUsername', username);
@@ -143,6 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    socket.on('usernameUpdated', (newUsername) => {
+        username = newUsername;
+        localStorage.setItem('chatUsername', username);
     });
 
     function addMessage(sender, text, senderProfilePicture) {

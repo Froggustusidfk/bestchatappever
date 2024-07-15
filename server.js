@@ -14,6 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const users = new Map();
 const chatHistory = [];
 const MAX_HISTORY = 200;
+const MAX_USERNAME_LENGTH = 30;
 
 function addToHistory(message) {
     chatHistory.push(message);
@@ -26,8 +27,9 @@ io.on('connection', (socket) => {
     console.log('New user connected');
 
     socket.on('join', (data) => {
-        users.set(socket.id, { username: data.username, profilePicture: data.profilePicture });
-        socket.username = data.username;
+        const username = data.username.slice(0, MAX_USERNAME_LENGTH);
+        users.set(socket.id, { username: username, profilePicture: data.profilePicture });
+        socket.username = username;
         socket.profilePicture = data.profilePicture;
         
         // Send chat history to the new user
@@ -66,9 +68,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('updateUsername', (newUsername) => {
+        newUsername = newUsername.slice(0, MAX_USERNAME_LENGTH);
         socket.username = newUsername;
         users.get(socket.id).username = newUsername;
         io.emit('userList', Array.from(users.values()));
+        socket.emit('usernameUpdated', newUsername);
     });
     
     socket.on('updateProfilePicture', (newProfilePicture) => {
