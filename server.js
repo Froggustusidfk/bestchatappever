@@ -33,7 +33,6 @@ io.on('connection', (socket) => {
         socket.username = username;
         socket.profilePicture = data.profilePicture;
         
-        // Send the most recent messages to the new user
         const recentMessages = chatHistory.slice(-INITIAL_LOAD);
         socket.emit('initialChatHistory', recentMessages);
         
@@ -48,26 +47,27 @@ io.on('connection', (socket) => {
         socket.emit('additionalChatHistory', moreMessages);
     });
 
-    socket.on('chatMessage', (message) => {
-        const messageData = {
+    socket.on('chatMessage', (messageData) => {
+        const fullMessageData = {
             type: 'message',
             username: socket.username,
-            message: message,
-            profilePicture: socket.profilePicture
+            message: messageData.message,
+            profilePicture: socket.profilePicture,
+            replyTo: messageData.replyTo
         };
-        addToHistory(messageData);
-        io.emit('chatMessage', messageData);
+        addToHistory(fullMessageData);
+        io.emit('chatMessage', fullMessageData);
     });
 
-    socket.on('chatImage', (imageData) => {
-        const imageMessage = {
-            type: 'image',
+    socket.on('chatVideo', (videoData) => {
+        const videoMessage = {
+            type: 'video',
             username: socket.username,
-            image: imageData,
+            video: videoData,
             profilePicture: socket.profilePicture
         };
-        addToHistory(imageMessage);
-        io.emit('chatImage', imageMessage);
+        addToHistory(videoMessage);
+        io.emit('chatVideo', videoMessage);
     });
 
     socket.on('disconnect', () => {

@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const chatMessages = document.getElementById('chat-messages');
-    const imageUpload = document.getElementById('image-upload');
-    const imageUploadButton = document.getElementById('image-upload-button');
+    const videoUpload = document.getElementById('video-upload');
+    const videoUploadButton = document.getElementById('video-upload-button');
     const profilePictureInput = document.getElementById('profile-picture-input');
     const profilePictureButton = document.getElementById('profile-picture-button');
     const profilePicturePreview = document.getElementById('profile-picture-preview');
@@ -23,10 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsCloseButton = document.getElementById('settings-close');
 
     const MAX_USERNAME_LENGTH = 30;
+    const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
 
     let username = localStorage.getItem('chatUsername');
     let profilePicture = localStorage.getItem('chatProfilePicture') || 'default-avatar.png';
     let isLoadingHistory = false;
+    let replyingTo = null;
+
+    const replyContainer = document.createElement('div');
+    replyContainer.id = 'reply-container';
+    replyContainer.style.display = 'none';
+    chatForm.insertBefore(replyContainer, messageInput);
 
     if (username) {
         joinChat(username);
@@ -58,22 +65,31 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const message = messageInput.value.trim();
         if (message) {
-            socket.emit('chatMessage', message);
+            const messageData = {
+                message: message,
+                replyTo: replyingTo
+            };
+            socket.emit('chatMessage', messageData);
             messageInput.value = '';
+            cancelReply();
         }
     });
 
-    imageUploadButton.addEventListener('click', () => {
-        imageUpload.click();
+    videoUploadButton.addEventListener('click', () => {
+        videoUpload.click();
     });
 
-    imageUpload.addEventListener('change', (e) => {
+    videoUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (file.size > MAX_VIDEO_SIZE) {
+                alert('Video file is too large. Maximum size is 50 MB.');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = (e) => {
-                const img = e.target.result;
-                socket.emit('chatImage', img);
+                const video = e.target.result;
+                socket.emit('chatVideo', video);
             };
             reader.readAsDataURL(file);
         }
@@ -129,11 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('chatMessage', (data) => {
-        addMessage(data.username, data.message, data.profilePicture);
+        addMessage(data.username, data.message, data.profilePicture, data.replyTo);
     });
 
-    socket.on('chatImage', (data) => {
-        addImage(data.username, data.image, data.profilePicture);
+    socket.on('chatVideo', (data) => {
+        addVideo(data.username, data.video, data.profilePicture);
     });
 
     socket.on('initialChatHistory', (history) => {
@@ -170,55 +186,87 @@ document.addEventListener('DOMContentLoaded', () => {
         const fragment = document.createDocumentFragment();
         messages.forEach(item => {
             if (item.type === 'message') {
-                fragment.appendChild(createMessageElement(item.username, item.message, item.profilePicture));
-            } else if (item.type === 'image') {
-                fragment.appendChild(createImageElement(item.username, item.image, item.profilePicture));
+                fragment.appendChild(createMessageElement(item.username, item.message, item.profilePicture, item.replyTo));
+            } else if (item.type === 'video') {
+                fragment.appendChild(createVideoElement(item.username, item.video, item.profilePicture));
             }
         });
         chatMessages.insertBefore(fragment, chatMessages.firstChild);
     }
 
-    function addMessage(sender, text, senderProfilePicture) {
-        const messageElement = createMessageElement(sender, text, senderProfilePicture);
+    function addMessage(sender, text, senderProfilePicture, replyData = null) {
+        const messageElement = createMessageElement(sender, text, senderProfilePicture, replyData);
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function addImage(sender, imageData, senderProfilePicture) {
-        const imageElement = createImageElement(sender, imageData, senderProfilePicture);
-        chatMessages.appendChild(imageElement);
+    function addVideo(sender, videoData, senderProfilePicture) {
+        const videoElement = createVideoElement(sender, videoData, senderProfilePicture);
+        chatMessages.appendChild(videoElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function createMessageElement(sender, text, senderProfilePicture) {
+    function createMessageElement(sender, text, senderProfilePicture, replyData = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         const color = getColorForUsername(sender);
+        
+        let replyHtml = '';
+        if (replyData) {
+            replyHtml = `
+                <div class="reply-info">
+                    <strong>Replying to ${replyData.username}:</strong> ${replyData.message.substring(0, 30)}${replyData.message.length > 30 ? '...' : ''}
+                </div>
+            `;
+        }
+        
         messageElement.innerHTML = `
             <div class="message-avatar-container" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
                 <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
             </div>
-            <div>
+            <div class="message-content">
+                ${replyHtml}
                 <strong style="color: ${color}">${sender}:</strong> ${formatMessageWithLinks(text)}
+                <button class="reply-button">Reply</button>
             </div>
         `;
+        
+        messageElement.querySelector('.reply-button').addEventListener('click', () => startReply(sender, text));
         return messageElement;
     }
 
-    function createImageElement(sender, imageData, senderProfilePicture) {
-        const imageElement = document.createElement('div');
-        imageElement.classList.add('message');
+    function createVideoElement(sender, videoData, senderProfilePicture) {
+        const videoElement = document.createElement('div');
+        videoElement.classList.add('message');
         const color = getColorForUsername(sender);
-        imageElement.innerHTML = `
+        videoElement.innerHTML = `
             <div class="message-avatar-container" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
                 <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
             </div>
-            <div>
+            <div class="message-content">
                 <strong style="color: ${color}">${sender}:</strong><br>
-                <img src="${imageData}" alt="Uploaded image" style="max-width: 100%; max-height: 300px;">
+                <video controls style="max-width: 100%; max-height: 300px;">
+                    <source src="${videoData}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         `;
-        return imageElement;
+        return videoElement;
+    }
+
+    function startReply(username, message) {
+        replyingTo = { username, message };
+        replyContainer.innerHTML = `
+            <p>Replying to ${username}: ${message.substring(0, 30)}${message.length > 30 ? '...' : ''}</p>
+            <button id="cancel-reply">Cancel</button>
+        `;
+        replyContainer.style.display = 'block';
+        document.getElementById('cancel-reply').addEventListener('click', cancelReply);
+    }
+
+    function cancelReply() {
+        replyingTo = null;
+        replyContainer.style.display = 'none';
     }
 
     function addLoadMoreButton() {
