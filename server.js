@@ -90,20 +90,20 @@ io.on('connection', (socket) => {
         users.get(socket.id).profilePicture = newProfilePicture;
         io.emit('userList', Array.from(users.values()));
     });
+
+    socket.on('chatImage', (imageData) => {
+        const imageMessage = {
+            type: 'image',
+            username: socket.username,
+            image: imageData,
+            profilePicture: socket.profilePicture
+        };
+        addToHistory(imageMessage);
+        io.emit('chatImage', imageMessage);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-});
-
-socket.on('chatImage', (imageData) => {
-    const imageMessage = {
-        type: 'image',
-        username: socket.username,
-        image: imageData,
-        profilePicture: socket.profilePicture
-    };
-    addToHistory(imageMessage);
-    io.emit('chatImage', imageMessage);
 });
