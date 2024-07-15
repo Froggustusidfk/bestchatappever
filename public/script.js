@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const chatMessages = document.getElementById('chat-messages');
-    const videoUpload = document.getElementById('video-upload');
-    const videoUploadButton = document.getElementById('video-upload-button');
+    const mediaUpload = document.getElementById('media-upload');
+    const mediaUploadButton = document.getElementById('media-upload-button');
     const profilePictureInput = document.getElementById('profile-picture-input');
     const profilePictureButton = document.getElementById('profile-picture-button');
     const profilePicturePreview = document.getElementById('profile-picture-preview');
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsCloseButton = document.getElementById('settings-close');
 
     const MAX_USERNAME_LENGTH = 30;
-    const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
+    const MAX_MEDIA_SIZE = 50 * 1024 * 1024; // 50 MB
 
     let username = localStorage.getItem('chatUsername');
     let profilePicture = localStorage.getItem('chatProfilePicture') || 'default-avatar.png';
@@ -75,21 +75,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    videoUploadButton.addEventListener('click', () => {
-        videoUpload.click();
+    mediaUploadButton.addEventListener('click', () => {
+        mediaUpload.click();
     });
 
-    videoUpload.addEventListener('change', (e) => {
+    mediaUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > MAX_VIDEO_SIZE) {
-                alert('Video file is too large. Maximum size is 50 MB.');
+            if (file.size > MAX_MEDIA_SIZE) {
+                alert('File is too large. Maximum size is 50 MB.');
                 return;
             }
             const reader = new FileReader();
             reader.onload = (e) => {
-                const video = e.target.result;
-                socket.emit('chatVideo', video);
+                const fileData = e.target.result;
+                if (file.type.startsWith('image/')) {
+                    socket.emit('chatImage', fileData);
+                } else if (file.type.startsWith('video/')) {
+                    socket.emit('chatVideo', fileData);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -152,6 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
         addVideo(data.username, data.video, data.profilePicture);
     });
 
+    socket.on('chatImage', (data) => {
+        addImage(data.username, data.image, data.profilePicture);
+    });
+
     socket.on('initialChatHistory', (history) => {
         chatMessages.innerHTML = '';
         appendMessages(history);
@@ -189,6 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 fragment.appendChild(createMessageElement(item.username, item.message, item.profilePicture, item.replyTo));
             } else if (item.type === 'video') {
                 fragment.appendChild(createVideoElement(item.username, item.video, item.profilePicture));
+            } else if (item.type === 'image') {
+                fragment.appendChild(createImageElement(item.username, item.image, item.profilePicture));
             }
         });
         chatMessages.insertBefore(fragment, chatMessages.firstChild);
@@ -203,6 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function addVideo(sender, videoData, senderProfilePicture) {
         const videoElement = createVideoElement(sender, videoData, senderProfilePicture);
         chatMessages.appendChild(videoElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addImage(sender, imageData, senderProfilePicture) {
+        const imageElement = createImageElement(sender, imageData, senderProfilePicture);
+        chatMessages.appendChild(imageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
@@ -252,6 +268,22 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         return videoElement;
+    }
+
+    function createImageElement(sender, imageData, senderProfilePicture) {
+        const imageElement = document.createElement('div');
+        imageElement.classList.add('message');
+        const color = getColorForUsername(sender);
+        imageElement.innerHTML = `
+            <div class="message-avatar-container" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
+                <img src="${senderProfilePicture}" alt="${sender}" class="message-avatar">
+            </div>
+            <div class="message-content">
+                <strong style="color: ${color}">${sender}:</strong><br>
+                <img src="${imageData}" alt="Shared image" style="max-width: 100%; max-height: 300px;">
+            </div>
+        `;
+        return imageElement;
     }
 
     function startReply(username, message) {

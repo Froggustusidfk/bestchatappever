@@ -149,6 +149,7 @@ button:hover {
     background-color: #e8f5e9;
     border-radius: 4px;
     max-width: 70%;
+    position: relative;
 }
 
 .message.system {
@@ -169,7 +170,7 @@ button:hover {
     object-fit: cover;
 }
 
-#image-upload-button {
+#media-upload-button {
     padding: 10px;
     background-color: #4caf50;
     color: white;
@@ -183,11 +184,11 @@ button:hover {
     justify-content: center;
 }
 
-#image-upload-button:hover {
+#media-upload-button:hover {
     background-color: #45a049;
 }
 
-#image-upload-button i {
+#media-upload-button i {
     font-size: 18px;
 }
 
@@ -219,4 +220,21 @@ button:hover {
 
 #settings-close:hover {
     background-color: #d32f2f;
+}
+
+.reply-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: transparent;
+    color: #4caf50;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.reply-button:hover {
+    background-color: #e8f5e9;
 }
