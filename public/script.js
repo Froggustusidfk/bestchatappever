@@ -61,19 +61,27 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('join', { username, profilePicture });
     }
 
-    chatForm.addEventListener('submit', (e) => {
+    chatForm.addEventListener('submit', sendMessage);
+messageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        const message = messageInput.value.trim();
-        if (message) {
-            const messageData = {
-                message: message,
-                replyTo: replyingTo
-            };
-            socket.emit('chatMessage', messageData);
-            messageInput.value = '';
-            cancelReply();
-        }
-    });
+        sendMessage(e);
+    }
+});
+
+function sendMessage(e) {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    if (message) {
+        const messageData = {
+            message: message,
+            replyTo: replyingTo
+        };
+        socket.emit('chatMessage', messageData);
+        messageInput.value = '';
+        cancelReply();
+    }
+}
 
     mediaUploadButton.addEventListener('click', () => {
         mediaUpload.click();
