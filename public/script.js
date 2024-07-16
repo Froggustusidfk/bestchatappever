@@ -62,26 +62,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     chatForm.addEventListener('submit', sendMessage);
-messageInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(e);
-    }
-});
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(e);
+        }
+    });
 
-function sendMessage(e) {
-    e.preventDefault();
-    const message = messageInput.value.trim();
-    if (message) {
-        const messageData = {
-            message: message,
-            replyTo: replyingTo
-        };
-        socket.emit('chatMessage', messageData);
-        messageInput.value = '';
-        cancelReply();
+    function sendMessage(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message) {
+            const messageData = {
+                message: message,
+                replyTo: replyingTo
+            };
+            socket.emit('chatMessage', messageData);
+            messageInput.value = '';
+            cancelReply();
+        }
     }
-}
 
     mediaUploadButton.addEventListener('click', () => {
         mediaUpload.click();
